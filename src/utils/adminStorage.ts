@@ -1,7 +1,7 @@
-import { ArticleItem, ServiceItem, ApkItem, CustomerOrder, AdminSettings, Language } from '../types';
+import { ArticleItem, ServiceItem, ApkItem, CustomerOrder, AdminSettings, Language, ServiceCategory } from '../types';
 import { ARTICLES_DATA } from '../data/articlesData';
-import { SERVICES_DATA } from '../data/servicesData';
-import { SERVICES_DATA_EN } from '../data/servicesDataEn';
+import { SERVICES_DATA, CATEGORIES_LIST } from '../data/servicesData';
+import { SERVICES_DATA_EN, CATEGORIES_LIST_EN } from '../data/servicesDataEn';
 import { APK_DOWNLOAD_URL } from '../components/AppDownloadModal';
 import { MASTER_OWNER_PIN, BACKUP_OWNER_PIN } from './securityConfig';
 
@@ -17,6 +17,7 @@ const STORAGE_KEYS = {
   ARTICLES: 'raqeeb_db_articles_v1',
   SERVICES: 'raqeeb_db_services_v1',
   APKS: 'raqeeb_db_apks_v1',
+  CATEGORIES: 'raqeeb_db_categories_v1',
   ORDERS: 'raqeeb_db_orders_v1',
   SETTINGS: 'raqeeb_db_settings_v1',
 };
@@ -31,7 +32,7 @@ export const INITIAL_APKS: ApkItem[] = [
     version: 'v2.2',
     size: '14.8 MB',
     downloadUrl: APK_DOWNLOAD_URL,
-    icon: 'https://images.unsplash.com/photo-1616469829941-c7200edec809?w=300&q=80',
+    icon: '/assets/aistudio/file_000000003a1482119a5607f2945397e0_42f71af7.png',
     screenshots: [
       'https://images.unsplash.com/photo-1555774698-0b77e0d5fac6?w=600&q=80',
       'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&q=80'
@@ -267,7 +268,15 @@ export const getStoredApks = (): ApkItem[] => {
       return INITIAL_APKS;
     }
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : INITIAL_APKS;
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed.map((item: ApkItem) => {
+        if (item.id === 'raqeeb-pro-app') {
+          return { ...item, icon: '/assets/aistudio/file_000000003a1482119a5607f2945397e0_42f71af7.png' };
+        }
+        return item;
+      });
+    }
+    return INITIAL_APKS;
   } catch {
     return INITIAL_APKS;
   }
@@ -322,8 +331,44 @@ export const incrementApkDownloads = (id: string): ApkItem[] => {
   return updated;
 };
 
+// Reorder APKs
+export const moveApkUp = (id: string): ApkItem[] => {
+  const current = getStoredApks();
+  const index = current.findIndex(a => a.id === id);
+  if (index <= 0) return current;
+  const updated = [...current];
+  const [item] = updated.splice(index, 1);
+  updated.splice(index - 1, 0, item);
+  saveApksList(updated);
+  return updated;
+};
+
+export const moveApkDown = (id: string): ApkItem[] => {
+  const current = getStoredApks();
+  const index = current.findIndex(a => a.id === id);
+  if (index === -1 || index >= current.length - 1) return current;
+  const updated = [...current];
+  const [item] = updated.splice(index, 1);
+  updated.splice(index + 1, 0, item);
+  saveApksList(updated);
+  return updated;
+};
+
+export const setApkRank = (id: string, targetRank: number): ApkItem[] => {
+  const current = getStoredApks();
+  const index = current.findIndex(a => a.id === id);
+  if (index === -1) return current;
+  const targetIndex = Math.max(0, Math.min(current.length - 1, targetRank - 1));
+  if (targetIndex === index) return current;
+  const updated = [...current];
+  const [item] = updated.splice(index, 1);
+  updated.splice(targetIndex, 0, item);
+  saveApksList(updated);
+  return updated;
+};
+
 /* ==========================================================================
-   SERVICES MANAGEMENT
+   SERVICES MANAGEMENT & REORDERING
    ========================================================================== */
 
 export const getStoredServices = (lang: Language = 'ar'): ServiceItem[] => {
@@ -377,6 +422,127 @@ export const deleteService = (id: string, lang: Language = 'ar'): ServiceItem[] 
   const updated = current.filter(s => s.id !== id);
   saveServicesList(updated, lang);
   return updated;
+};
+
+export const moveServiceUp = (id: string, lang: Language = 'ar'): ServiceItem[] => {
+  const current = getStoredServices(lang);
+  const index = current.findIndex(s => s.id === id);
+  if (index <= 0) return current;
+  const updated = [...current];
+  const [item] = updated.splice(index, 1);
+  updated.splice(index - 1, 0, item);
+  saveServicesList(updated, lang);
+  return updated;
+};
+
+export const moveServiceDown = (id: string, lang: Language = 'ar'): ServiceItem[] => {
+  const current = getStoredServices(lang);
+  const index = current.findIndex(s => s.id === id);
+  if (index === -1 || index >= current.length - 1) return current;
+  const updated = [...current];
+  const [item] = updated.splice(index, 1);
+  updated.splice(index + 1, 0, item);
+  saveServicesList(updated, lang);
+  return updated;
+};
+
+export const setServiceRank = (id: string, targetRank: number, lang: Language = 'ar'): ServiceItem[] => {
+  const current = getStoredServices(lang);
+  const index = current.findIndex(s => s.id === id);
+  if (index === -1) return current;
+  const targetIndex = Math.max(0, Math.min(current.length - 1, targetRank - 1));
+  if (targetIndex === index) return current;
+  const updated = [...current];
+  const [item] = updated.splice(index, 1);
+  updated.splice(targetIndex, 0, item);
+  saveServicesList(updated, lang);
+  return updated;
+};
+
+/* ==========================================================================
+   CATEGORIES MANAGEMENT & REORDERING
+   ========================================================================== */
+
+export interface CategoryOrderItem {
+  id: ServiceCategory;
+  name: string;
+  icon: string;
+  count: number;
+}
+
+export const getStoredCategories = (lang: Language = 'ar'): CategoryOrderItem[] => {
+  const defaults = lang === 'ar' ? CATEGORIES_LIST : CATEGORIES_LIST_EN;
+  if (typeof window === 'undefined') return defaults;
+  try {
+    const raw = localStorage.getItem(`${STORAGE_KEYS.CATEGORIES}_${lang}`);
+    if (!raw) {
+      return defaults;
+    }
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) return defaults;
+    
+    // Dynamically calculate latest services count per category
+    const services = getStoredServices(lang);
+    return parsed.map((cat: CategoryOrderItem) => {
+      const actualCount = cat.id === 'all' 
+        ? services.length 
+        : services.filter(s => s.category === cat.id).length;
+      return { ...cat, count: actualCount };
+    });
+  } catch {
+    return defaults;
+  }
+};
+
+export const saveCategoriesOrder = (categories: CategoryOrderItem[], lang: Language = 'ar'): void => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(`${STORAGE_KEYS.CATEGORIES}_${lang}`, JSON.stringify(categories));
+  } catch (e) {
+    console.error('Failed to save categories order', e);
+  }
+};
+
+export const moveCategoryUp = (id: ServiceCategory, lang: Language = 'ar'): CategoryOrderItem[] => {
+  const current = getStoredCategories(lang);
+  const index = current.findIndex(c => c.id === id);
+  if (index <= 0) return current;
+  const updated = [...current];
+  const [item] = updated.splice(index, 1);
+  updated.splice(index - 1, 0, item);
+  saveCategoriesOrder(updated, lang);
+  return updated;
+};
+
+export const moveCategoryDown = (id: ServiceCategory, lang: Language = 'ar'): CategoryOrderItem[] => {
+  const current = getStoredCategories(lang);
+  const index = current.findIndex(c => c.id === id);
+  if (index === -1 || index >= current.length - 1) return current;
+  const updated = [...current];
+  const [item] = updated.splice(index, 1);
+  updated.splice(index + 1, 0, item);
+  saveCategoriesOrder(updated, lang);
+  return updated;
+};
+
+export const setCategoryRank = (id: ServiceCategory, targetRank: number, lang: Language = 'ar'): CategoryOrderItem[] => {
+  const current = getStoredCategories(lang);
+  const index = current.findIndex(c => c.id === id);
+  if (index === -1) return current;
+  const targetIndex = Math.max(0, Math.min(current.length - 1, targetRank - 1));
+  if (targetIndex === index) return current;
+  const updated = [...current];
+  const [item] = updated.splice(index, 1);
+  updated.splice(targetIndex, 0, item);
+  saveCategoriesOrder(updated, lang);
+  return updated;
+};
+
+export const resetCategoriesOrder = (lang: Language = 'ar'): CategoryOrderItem[] => {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(`${STORAGE_KEYS.CATEGORIES}_${lang}`);
+  }
+  return getStoredCategories(lang);
 };
 
 /* ==========================================================================
@@ -458,6 +624,8 @@ export const exportAllDatabaseJSON = (): string => {
     exportDate: new Date().toISOString(),
     articles: getStoredArticles(),
     apks: getStoredApks(),
+    categoriesAr: getStoredCategories('ar'),
+    categoriesEn: getStoredCategories('en'),
     servicesAr: getStoredServices('ar'),
     servicesEn: getStoredServices('en'),
     orders: getStoredOrders(),
@@ -471,6 +639,8 @@ export const importDatabaseJSON = (jsonString: string): boolean => {
     const data = JSON.parse(jsonString);
     if (data.articles && Array.isArray(data.articles)) saveArticlesList(data.articles);
     if (data.apks && Array.isArray(data.apks)) saveApksList(data.apks);
+    if (data.categoriesAr && Array.isArray(data.categoriesAr)) saveCategoriesOrder(data.categoriesAr, 'ar');
+    if (data.categoriesEn && Array.isArray(data.categoriesEn)) saveCategoriesOrder(data.categoriesEn, 'en');
     if (data.servicesAr && Array.isArray(data.servicesAr)) saveServicesList(data.servicesAr, 'ar');
     if (data.servicesEn && Array.isArray(data.servicesEn)) saveServicesList(data.servicesEn, 'en');
     if (data.orders && Array.isArray(data.orders)) {
@@ -491,6 +661,8 @@ export const resetToDefaults = (): void => {
   try {
     localStorage.removeItem(STORAGE_KEYS.ARTICLES);
     localStorage.removeItem(STORAGE_KEYS.APKS);
+    localStorage.removeItem(`${STORAGE_KEYS.CATEGORIES}_ar`);
+    localStorage.removeItem(`${STORAGE_KEYS.CATEGORIES}_en`);
     localStorage.removeItem(`${STORAGE_KEYS.SERVICES}_ar`);
     localStorage.removeItem(`${STORAGE_KEYS.SERVICES}_en`);
     localStorage.removeItem(STORAGE_KEYS.ORDERS);

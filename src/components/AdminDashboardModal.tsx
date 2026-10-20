@@ -27,8 +27,26 @@ import {
   Phone, 
   MessageSquare,
   KeyRound,
-  RefreshCw
+  RefreshCw,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  Move,
+  Globe,
+  Copy,
+  Check
 } from 'lucide-react';
+import { 
+  SITE_DOMAIN, 
+  SITE_URL, 
+  BRAND_LOGO_PATH,
+  getArticleCanonicalUrl, 
+  getServiceCanonicalUrl, 
+  getGoogleSearchConsoleInspectUrl, 
+  getGoogleSearchConsoleDashboardUrl, 
+  getGoogleRichResultsTestUrl, 
+  generateSitemapXml 
+} from '../utils/seoConfig';
 import { 
   ArticleItem, 
   ServiceItem, 
@@ -48,10 +66,22 @@ import {
   addApk, 
   updateApk, 
   deleteApk, 
+  moveApkUp,
+  moveApkDown,
+  setApkRank,
   getStoredServices, 
   addService, 
   updateService, 
   deleteService, 
+  moveServiceUp,
+  moveServiceDown,
+  setServiceRank,
+  getStoredCategories,
+  moveCategoryUp,
+  moveCategoryDown,
+  setCategoryRank,
+  resetCategoriesOrder,
+  CategoryOrderItem,
   getStoredOrders, 
   updateOrderStatus, 
   deleteOrder, 
@@ -79,10 +109,12 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   const isAr = lang === 'ar';
 
   // Active top navigation tab
-  const [activeTab, setActiveTab] = useState<'apks' | 'articles' | 'services' | 'orders' | 'settings' | 'backup'>('apks');
+  const [activeTab, setActiveTab] = useState<'apks' | 'articles' | 'categories' | 'services' | 'orders' | 'seo' | 'settings' | 'backup'>('apks');
+  const [copiedUrlId, setCopiedUrlId] = useState<string | null>(null);
 
   // Loaded data lists
   const [apksList, setApksList] = useState<ApkItem[]>([]);
+  const [categoriesList, setCategoriesList] = useState<CategoryOrderItem[]>([]);
   const [articlesList, setArticlesList] = useState<ArticleItem[]>([]);
   const [servicesList, setServicesList] = useState<ServiceItem[]>([]);
   const [ordersList, setOrdersList] = useState<CustomerOrder[]>([]);
@@ -111,6 +143,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   // Load all data on open
   const refreshData = () => {
     setApksList(getStoredApks());
+    setCategoriesList(getStoredCategories('ar'));
     setArticlesList(getStoredArticles());
     setServicesList(getStoredServices('ar'));
     setOrdersList(getStoredOrders());
@@ -127,6 +160,81 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // Reorder APKs
+  const handleMoveApkUp = (id: string) => {
+    const updated = moveApkUp(id);
+    setApksList(updated);
+    if (onDataChanged) onDataChanged();
+    showToast(isAr ? 'تم تقديم التطبيق للأعلى ⬆️' : 'Moved APK up');
+  };
+
+  const handleMoveApkDown = (id: string) => {
+    const updated = moveApkDown(id);
+    setApksList(updated);
+    if (onDataChanged) onDataChanged();
+    showToast(isAr ? 'تم تأخير التطبيق للأسفل ⬇️' : 'Moved APK down');
+  };
+
+  const handleSetApkRank = (id: string, rank: number) => {
+    const updated = setApkRank(id, rank);
+    setApksList(updated);
+    if (onDataChanged) onDataChanged();
+    showToast(isAr ? `تم تعيين الترتيب إلى #${rank} 🎯` : `Set rank to #${rank}`);
+  };
+
+  // Reorder Services
+  const handleMoveServiceUp = (id: string) => {
+    const updated = moveServiceUp(id, 'ar');
+    setServicesList(updated);
+    if (onDataChanged) onDataChanged();
+    showToast(isAr ? 'تم تقديم الخدمة للأعلى ⬆️' : 'Moved service up');
+  };
+
+  const handleMoveServiceDown = (id: string) => {
+    const updated = moveServiceDown(id, 'ar');
+    setServicesList(updated);
+    if (onDataChanged) onDataChanged();
+    showToast(isAr ? 'تم تأخير الخدمة للأسفل ⬇️' : 'Moved service down');
+  };
+
+  const handleSetServiceRank = (id: string, rank: number) => {
+    const updated = setServiceRank(id, rank, 'ar');
+    setServicesList(updated);
+    if (onDataChanged) onDataChanged();
+    showToast(isAr ? `تم تعيين ترتيب الخدمة إلى #${rank} 🎯` : `Set service rank to #${rank}`);
+  };
+
+  // Reorder Categories
+  const handleMoveCategoryUp = (id: ServiceCategory) => {
+    const updated = moveCategoryUp(id, 'ar');
+    setCategoriesList(updated);
+    if (onDataChanged) onDataChanged();
+    showToast(isAr ? 'تم تقديم التصنيف للأعلى ⬆️' : 'Moved category up');
+  };
+
+  const handleMoveCategoryDown = (id: ServiceCategory) => {
+    const updated = moveCategoryDown(id, 'ar');
+    setCategoriesList(updated);
+    if (onDataChanged) onDataChanged();
+    showToast(isAr ? 'تم تأخير التصنيف للأسفل ⬇️' : 'Moved category down');
+  };
+
+  const handleSetCategoryRank = (id: ServiceCategory, rank: number) => {
+    const updated = setCategoryRank(id, rank, 'ar');
+    setCategoriesList(updated);
+    if (onDataChanged) onDataChanged();
+    showToast(isAr ? `تم تعيين ترتيب التصنيف إلى #${rank} 🎯` : `Set category rank to #${rank}`);
+  };
+
+  const handleResetCategories = () => {
+    if (confirm(isAr ? 'هل أنت متأكد من استعادة الترتيب الافتراضي للتصنيفات؟' : 'Reset categories order?')) {
+      const updated = resetCategoriesOrder('ar');
+      setCategoriesList(updated);
+      if (onDataChanged) onDataChanged();
+      showToast(isAr ? 'تمت استعادة الترتيب الأصلي للتصنيفات' : 'Categories reset');
+    }
   };
 
   if (!isOpen) return null;
@@ -381,6 +489,16 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
     }
   };
 
+  const handleCopyUrl = (url: string, id: string) => {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedUrlId(id);
+      showToast(isAr ? 'تم نسخ رابط الأرشفة لجوجل كونسول!' : 'URL copied for Google Search Console!');
+      setTimeout(() => setCopiedUrlId(null), 2500);
+    }).catch(() => {
+      // fallback
+    });
+  };
+
   const handleLogout = () => {
     setAdminSession(false);
     onClose();
@@ -399,11 +517,12 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
         <div className="px-4 sm:px-6 py-3.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0">
           
           {/* Brand & Title */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 p-0.5 shadow-lg shadow-cyan-500/20">
-              <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-                <ShieldCheck className="w-6 h-6 text-cyan-400" />
-              </div>
+            <div className="w-10 h-10 rounded-xl overflow-hidden p-0.5 bg-gradient-to-tr from-cyan-500 to-blue-600 shadow-lg shadow-cyan-500/20 bg-white flex items-center justify-center shrink-0">
+              <img 
+                src={BRAND_LOGO_PATH} 
+                alt="شعار رقيب" 
+                className="w-full h-full object-contain rounded-[9px]"
+              />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -490,6 +609,36 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
           </button>
 
           <button
+            onClick={() => { setActiveTab('seo'); setSearchQuery(''); }}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition shrink-0 cursor-pointer ${
+              activeTab === 'seo'
+                ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white shadow-md shadow-emerald-900/30'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+            }`}
+          >
+            <Globe className="w-4 h-4 text-emerald-400" />
+            <span>{isAr ? 'أرشفة جوجل كونسول (SEO)' : 'Google Console (SEO)'}</span>
+            <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-mono">
+              rqeebpro.store
+            </span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('categories'); setSearchQuery(''); }}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition shrink-0 cursor-pointer ${
+              activeTab === 'categories'
+                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-900/30'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+            }`}
+          >
+            <ArrowUpDown className="w-4 h-4" />
+            <span>{isAr ? 'ترتيب التصنيفات' : 'Categories Order'}</span>
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-900/80 border border-slate-700">
+              {categoriesList.length}
+            </span>
+          </button>
+
+          <button
             onClick={() => { setActiveTab('services'); setSearchQuery(''); }}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition shrink-0 cursor-pointer ${
               activeTab === 'services'
@@ -498,7 +647,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>{isAr ? 'الخدمات والأسعار' : 'Services'}</span>
+            <span>{isAr ? 'الخدمات وترتيبها' : 'Services & Order'}</span>
             <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-900/80 border border-slate-700">
               {servicesList.length}
             </span>
@@ -623,6 +772,49 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                             🔗 {apk.downloadUrl}
                           </div>
                         </div>
+
+                        {/* Interactive Reordering Controls */}
+                        <div className="p-2.5 rounded-xl bg-slate-950 border border-cyan-800/40 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-mono font-black px-2 py-0.5 rounded-md bg-cyan-950 border border-cyan-700/60 text-cyan-300">
+                              #{apksList.findIndex(a => a.id === apk.id) + 1}
+                            </span>
+                            <span className="text-[11px] text-slate-300 font-bold">{isAr ? 'الترتيب بالموقع' : 'Order'}</span>
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleMoveApkUp(apk.id)}
+                              title={isAr ? 'تقديم لأعلى' : 'Move Up'}
+                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-cyan-900/60 text-cyan-300 hover:text-white transition cursor-pointer"
+                            >
+                              <ArrowUp className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMoveApkDown(apk.id)}
+                              title={isAr ? 'تأخير لأسفل' : 'Move Down'}
+                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-cyan-900/60 text-cyan-300 hover:text-white transition cursor-pointer"
+                            >
+                              <ArrowDown className="w-3.5 h-3.5" />
+                            </button>
+                            
+                            {/* Rank selector dropdown */}
+                            <select
+                              value={apksList.findIndex(a => a.id === apk.id) + 1}
+                              onChange={(e) => handleSetApkRank(apk.id, Number(e.target.value))}
+                              className="bg-slate-900 border border-cyan-700/50 text-cyan-200 rounded-lg px-2 py-1 text-xs cursor-pointer font-bold focus:outline-none"
+                              title={isAr ? 'تحديد الترتيب بدقة' : 'Set rank'}
+                            >
+                              {apksList.map((_, rIdx) => (
+                                <option key={rIdx + 1} value={rIdx + 1}>
+                                  {isAr ? `ترتيب #${rIdx + 1}` : `Rank #${rIdx + 1}`}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
                       </div>
 
                       {/* Action buttons */}
@@ -725,6 +917,47 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                           <p className="text-xs text-slate-400 line-clamp-3 leading-relaxed">
                             {art.summary}
                           </p>
+
+                          {/* Google Search Console Direct Indexing URL */}
+                          <div className="pt-2">
+                            <div className="p-2 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+                              <div className="flex items-center justify-between text-[10px] font-bold">
+                                <span className="flex items-center gap-1 text-cyan-400">
+                                  <Globe className="w-3 h-3 text-cyan-400" />
+                                  <span>{isAr ? 'رابط الأرشفة (Google Console):' : 'Indexing URL:'}</span>
+                                </span>
+                                <span className="text-[10px] text-emerald-400 font-mono">rqeebpro.store</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  type="text"
+                                  readOnly
+                                  value={getArticleCanonicalUrl(art.id)}
+                                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-[11px] font-mono text-cyan-200 select-all"
+                                  onClick={(e) => (e.target as HTMLInputElement).select()}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyUrl(getArticleCanonicalUrl(art.id), art.id)}
+                                  className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-bold flex items-center gap-1 transition cursor-pointer shrink-0"
+                                  title={isAr ? 'نسخ رابط المنشور' : 'Copy URL'}
+                                >
+                                  {copiedUrlId === art.id ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                                  <span>{copiedUrlId === art.id ? (isAr ? 'تم!' : 'Done') : (isAr ? 'نسخ' : 'Copy')}</span>
+                                </button>
+                                <a
+                                  href={getGoogleSearchConsoleInspectUrl(getArticleCanonicalUrl(art.id))}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="px-2 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold flex items-center gap-1 transition cursor-pointer shrink-0"
+                                  title={isAr ? 'فحص وفهرسة الرابط في Google Search Console' : 'Inspect in Google Console'}
+                                >
+                                  <Search className="w-3 h-3" />
+                                  <span>{isAr ? 'أرشفة' : 'Index'}</span>
+                                </a>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
@@ -1047,6 +1280,328 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                 </div>
 
               </div>
+            </div>
+          )}
+
+          {/* =================================================================
+              TAB 7: GOOGLE SEARCH CONSOLE & SEO HUB (rqeebpro.store)
+              ================================================================= */}
+          {activeTab === 'seo' && (
+            <div className="space-y-6">
+              
+              {/* Header Hero Banner for rqeebpro.store Google Console */}
+              <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-emerald-950/80 via-slate-900 to-cyan-950/80 border border-emerald-500/40 space-y-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-900/30">
+                      <Globe className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-base sm:text-xl font-black text-white">
+                          {isAr ? 'مركز أرشفة وفهرسة جوجل كونسول (Google Search Console)' : 'Google Search Console & SEO Hub'}
+                        </h2>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-900/80 border border-emerald-500 text-emerald-300">
+                          {isAr ? 'دومين رسمي معتمد' : 'Verified Domain'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-300">
+                        {isAr 
+                          ? 'إدارة وفحص روابط المنشورات والمقالات والخدمات لدومين rqeebpro.store لضمان تصدر نتائج بحث جوجل' 
+                          : 'Manage and inspect canonical indexing URLs for rqeebpro.store in Google Search Console'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <a
+                      href={getGoogleSearchConsoleDashboardUrl()}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-emerald-900/30 cursor-pointer"
+                    >
+                      <Search className="w-4 h-4" />
+                      <span>{isAr ? 'فتح لوحة Google Search Console' : 'Open Search Console'}</span>
+                      <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                    </a>
+
+                    <a
+                      href={`${SITE_URL}/sitemap.xml`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <FileText className="w-4 h-4 text-cyan-400" />
+                      <span>sitemap.xml</span>
+                      <ExternalLink className="w-3 h-3 opacity-60" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* Domain Quick Metric Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                  <div className="p-3 rounded-2xl bg-slate-950/70 border border-slate-800 text-center space-y-1">
+                    <div className="text-[10px] text-slate-400 font-semibold">{isAr ? 'النطاق الرسمي (Domain)' : 'Domain'}</div>
+                    <div className="text-xs sm:text-sm font-bold text-emerald-400 font-mono">{SITE_DOMAIN}</div>
+                  </div>
+
+                  <div className="p-3 rounded-2xl bg-slate-950/70 border border-slate-800 text-center space-y-1">
+                    <div className="text-[10px] text-slate-400 font-semibold">{isAr ? 'المقالات والمنشورات' : 'Indexed Articles'}</div>
+                    <div className="text-xs sm:text-sm font-bold text-cyan-400 font-mono">{articlesList.length} {isAr ? 'منشور جاهز' : 'posts'}</div>
+                  </div>
+
+                  <div className="p-3 rounded-2xl bg-slate-950/70 border border-slate-800 text-center space-y-1">
+                    <div className="text-[10px] text-slate-400 font-semibold">{isAr ? 'الخدمات التقنية' : 'Services'}</div>
+                    <div className="text-xs sm:text-sm font-bold text-blue-400 font-mono">{servicesList.length} {isAr ? 'خدمة' : 'services'}</div>
+                  </div>
+
+                  <div className="p-3 rounded-2xl bg-slate-950/70 border border-slate-800 text-center space-y-1">
+                    <div className="text-[10px] text-slate-400 font-semibold">{isAr ? 'حالة التوافق مع جوجل' : 'Google Readiness'}</div>
+                    <div className="text-xs sm:text-sm font-bold text-emerald-300 flex items-center justify-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>100% SEO Ready</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step-by-Step Instruction Guide for the Owner */}
+              <div className="p-5 rounded-3xl bg-slate-900 border border-slate-800 space-y-3">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <span>{isAr ? 'كيف تؤرشف أي منشور جديد في Google Search Console خلال 60 ثانية؟' : 'How to index any new post in Google Console in 60 seconds?'}</span>
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+                  <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                    <div className="font-bold text-cyan-400">1. {isAr ? 'نسخ الرابط' : 'Copy URL'}</div>
+                    <p className="text-slate-400 text-[11px] leading-relaxed">
+                      {isAr ? 'انقر على زر "نسخ" بجانب أي منشور في الجدول أدناه.' : 'Click Copy beside any post in the table below.'}
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                    <div className="font-bold text-cyan-400">2. {isAr ? 'فتح الفحص' : 'Open Inspection'}</div>
+                    <p className="text-slate-400 text-[11px] leading-relaxed">
+                      {isAr ? 'انقر زر "فحص في Search Console" ليتم فتح أداة فحص العناوين لدومين rqeebpro.store.' : 'Click Inspect in Search Console to open URL inspection.'}
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                    <div className="font-bold text-cyan-400">3. {isAr ? 'اختبار الرابط' : 'Test Live URL'}</div>
+                    <p className="text-slate-400 text-[11px] leading-relaxed">
+                      {isAr ? 'الصق الرابط واضغط Enter وانتظر ثوانٍ للتحقق من سلامة الصفحة وروبوت جوجل.' : 'Press Enter to test live page accessibility for Googlebot.'}
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                    <div className="font-bold text-emerald-400">4. {isAr ? 'طلب الفهرسة' : 'Request Indexing'}</div>
+                    <p className="text-slate-400 text-[11px] leading-relaxed">
+                      {isAr ? 'انقر على زر "طلب الفهرسة (Request Indexing)" ليظهر المقال في بحث جوجل بسرعة.' : 'Click Request Indexing to submit the page to Google crawler.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Table of All Articles & Posts for GSC Indexing */}
+              <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden">
+                <div className="p-4 sm:p-5 border-b border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-cyan-400" />
+                      <span>{isAr ? 'فهرس روابط المنشورات والمقالات (جاهزة للأرشفة بنقرة واحدة)' : 'Articles Indexing Directory'}</span>
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      {isAr ? `إجمالي ${articlesList.length} منشورات منشورة على دومين rqeebpro.store` : `Total ${articlesList.length} articles published on rqeebpro.store`}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const allUrls = [
+                        `${SITE_URL}/`,
+                        `${SITE_URL}/#services-section`,
+                        `${SITE_URL}/#apk-store-section`,
+                        `${SITE_URL}/#articles-section`,
+                        ...articlesList.map(a => getArticleCanonicalUrl(a.id)),
+                        ...servicesList.map(s => getServiceCanonicalUrl(s.id))
+                      ].join('\n');
+                      navigator.clipboard.writeText(allUrls).then(() => {
+                        showToast(isAr ? 'تم نسخ كافة روابط الموقع دفعة واحدة!' : 'All site URLs copied to clipboard!');
+                      });
+                    }}
+                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>{isAr ? 'نسخ كافة روابط الموقع دفعة واحدة (Bulk Export)' : 'Copy All URLs'}</span>
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-right">
+                    <thead className="bg-slate-950 text-slate-400 text-[11px] font-bold border-b border-slate-800">
+                      <tr>
+                        <th className="p-3.5">{isAr ? 'المنشور' : 'Article'}</th>
+                        <th className="p-3.5">{isAr ? 'التصنيف' : 'Category'}</th>
+                        <th className="p-3.5">{isAr ? 'رابط الأرشفة الرسمي (Canonical URL)' : 'Canonical URL'}</th>
+                        <th className="p-3.5 text-center">{isAr ? 'الإجراءات' : 'Actions'}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800">
+                      {articlesList.map((art) => {
+                        const url = getArticleCanonicalUrl(art.id);
+                        const isCopied = copiedUrlId === art.id;
+
+                        return (
+                          <tr key={art.id} className="hover:bg-slate-950/50 transition">
+                            <td className="p-3.5">
+                              <div className="flex items-center gap-3">
+                                <img 
+                                  src={art.image} 
+                                  alt="" 
+                                  className="w-10 h-10 rounded-lg object-cover bg-slate-950 shrink-0" 
+                                />
+                                <div className="min-w-0 max-w-xs">
+                                  <div className="font-bold text-white truncate" title={art.title}>
+                                    {art.title}
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 font-mono">
+                                    ID: {art.id}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+
+                            <td className="p-3.5 whitespace-nowrap">
+                              <span className="px-2.5 py-1 rounded-full bg-slate-950 border border-slate-700 text-[10px] font-semibold text-cyan-300">
+                                {art.categoryName}
+                              </span>
+                            </td>
+
+                            <td className="p-3.5">
+                              <div className="flex items-center gap-1.5 max-w-md">
+                                <input
+                                  type="text"
+                                  readOnly
+                                  dir="ltr"
+                                  value={url}
+                                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-[11px] font-mono text-emerald-300 select-all"
+                                  onClick={(e) => (e.target as HTMLInputElement).select()}
+                                />
+                              </div>
+                            </td>
+
+                            <td className="p-3.5 text-center whitespace-nowrap">
+                              <div className="flex items-center justify-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyUrl(url, art.id)}
+                                  className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                  title={isAr ? 'نسخ رابط المنشور' : 'Copy URL'}
+                                >
+                                  {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                                  <span>{isCopied ? (isAr ? 'تم!' : 'Done') : (isAr ? 'نسخ' : 'Copy')}</span>
+                                </button>
+
+                                <a
+                                  href={getGoogleSearchConsoleInspectUrl(url)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold transition flex items-center gap-1 shadow-md cursor-pointer"
+                                  title={isAr ? 'فحص وأرشفة الرابط في Google Search Console' : 'Inspect in Google Console'}
+                                >
+                                  <Search className="w-3.5 h-3.5" />
+                                  <span>{isAr ? 'فحص في Search Console' : 'Inspect GSC'}</span>
+                                  <ExternalLink className="w-3 h-3 opacity-70" />
+                                </a>
+
+                                <a
+                                  href={getGoogleRichResultsTestUrl(url)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+                                  title={isAr ? 'اختبار النتائج المنسقة' : 'Rich Results Test'}
+                                >
+                                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                                </a>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Sitemap.xml Interactive Exporter */}
+              <div className="bg-slate-900 rounded-3xl border border-slate-800 p-5 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-emerald-400" />
+                      <span>{isAr ? 'مولّد خريطة الموقع الحي (Sitemap.xml)' : 'Live Sitemap.xml Generator'}</span>
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      {isAr ? 'خريطة XML ديناميكية تشمل كافة المقالات والتطبيقات والصفحات جاهزة لتقديمها في Google Search Console > ملفات Sitemap' : 'Submit this sitemap URL in Google Search Console > Sitemaps'}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const xml = generateSitemapXml(articlesList, servicesList);
+                        navigator.clipboard.writeText(xml).then(() => {
+                          showToast(isAr ? 'تم نسخ كود XML خريطة الموقع!' : 'Sitemap XML copied!');
+                        });
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>{isAr ? 'نسخ كود XML' : 'Copy XML'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const xml = generateSitemapXml(articlesList, servicesList);
+                        const blob = new Blob([xml], { type: 'application/xml' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'sitemap.xml';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        showToast(isAr ? 'تم تحميل ملف sitemap.xml بنجاح!' : 'sitemap.xml downloaded!');
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-1 shadow-md cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>{isAr ? 'تحميل sitemap.xml' : 'Download sitemap.xml'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-2">
+                  <div className="text-xs font-mono text-emerald-300 truncate" dir="ltr">
+                    https://rqeebpro.store/sitemap.xml
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText('https://rqeebpro.store/sitemap.xml').then(() => {
+                        showToast(isAr ? 'تم نسخ رابط خريطة الموقع!' : 'Sitemap URL copied!');
+                      });
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white text-[10px] font-bold shrink-0 cursor-pointer"
+                  >
+                    {isAr ? 'نسخ الرابط' : 'Copy URL'}
+                  </button>
+                </div>
+              </div>
+
             </div>
           )}
 
@@ -1382,6 +1937,61 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                   placeholder={isAr ? 'اكتب الشرح والمحتوى الكامل هنا...' : 'Full article body...'}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white leading-relaxed"
                 />
+              </div>
+
+              {/* Google Search Console & Canonical URL Settings */}
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-emerald-400" />
+                    <span className="text-xs font-bold text-white">{isAr ? 'رابط الأرشفة المباشر في Google Search Console' : 'Google Console Indexing Link'}</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/80 border border-emerald-700/50 px-2 py-0.5 rounded-full">
+                    rqeebpro.store
+                  </span>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] text-slate-400">
+                    {isAr ? 'معرف الرابط (Slug ID):' : 'Slug ID:'}
+                  </label>
+                  <input
+                    type="text"
+                    dir="ltr"
+                    value={editingArticle.id || ''}
+                    onChange={(e) => setEditingArticle({ ...editingArticle, id: e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '-') })}
+                    placeholder="post-custom-slug"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-cyan-300"
+                  />
+                </div>
+
+                {editingArticle.id && (
+                  <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                    <div className="text-[11px] text-slate-400 font-medium">
+                      {isAr ? 'الرابط المعتمد النهائي للأرشفة:' : 'Final Canonical URL for GSC:'}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        dir="ltr"
+                        value={getArticleCanonicalUrl(editingArticle.id)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-emerald-300 select-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleCopyUrl(getArticleCanonicalUrl(editingArticle.id!), editingArticle.id!)}
+                        className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold transition flex items-center gap-1 shrink-0"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>{isAr ? 'نسخ' : 'Copy'}</span>
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-slate-400 leading-relaxed">
+                      💡 {isAr ? 'انسخ هذا الرابط والصقه في Google Search Console > فحص العناوين، واضغط (طلب الفهرسة) ليظهر منشورك في بحث جوجل فوراً.' : 'Paste this URL in GSC URL Inspection and click Request Indexing.'}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-2">

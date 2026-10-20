@@ -52,19 +52,19 @@ export const TestimonialsSection: React.FC<TestimonialsSectionProps> = ({ lang }
   const items = isAr ? TESTIMONIALS_DATA : testimonialsEn;
 
   return (
-    <section className="py-16 bg-slate-950/80 border-t border-slate-900">
+    <section className="py-16 sm:py-20 relative border-t border-[#DBEAFE]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
         <div className="text-center max-w-2xl mx-auto space-y-3 mb-12">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-950 text-cyan-400 text-xs font-bold border border-cyan-800/40">
-            <ShieldCheck className="w-3.5 h-3.5" />
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white border border-[#DBEAFE] text-[#2563EB] text-xs font-bold shadow-sm">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#3B82F6]" />
             <span>{isAr ? 'ثقة وتجارب العملاء' : 'Client Reviews & Proof'}</span>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-black text-white">
+          <h2 className="text-2xl sm:text-3xl font-black text-[#0F172A]">
             {isAr ? 'ماذا يقول عملاؤنا عن رقيب؟' : 'What Our Clients Say About Raqeeb'}
           </h2>
-          <p className="text-xs sm:text-sm text-slate-400">
+          <p className="text-xs sm:text-sm text-[#64748B]">
             {isAr ? 'قصص نجاح واقعية في استعادة الحسابات والبيانات وتطوير الأعمال' : 'Real success stories in account security, data extraction, and business scale'}
           </p>
         </div>
@@ -74,31 +74,31 @@ export const TestimonialsSection: React.FC<TestimonialsSectionProps> = ({ lang }
           {items.map((item) => (
             <div
               key={item.id}
-              className={`p-6 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col justify-between ${isAr ? 'text-right' : 'text-left'} hover:border-slate-700 transition space-y-4`}
+              className={`p-6 rounded-2xl bg-white border border-[#DBEAFE] shadow-[0_4px_20px_rgba(37,99,235,0.08)] hover:shadow-[0_8px_30px_rgba(37,99,235,0.12)] hover:-translate-y-1 transition duration-300 flex flex-col justify-between ${isAr ? 'text-right' : 'text-left'} space-y-4`}
               dir={isAr ? 'rtl' : 'ltr'}
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1 text-amber-400">
+                  <div className="flex items-center gap-1 text-amber-500">
                     {[...Array(item.rating)].map((_, i) => (
-                      <Star key={i} className="w-3.5 h-3.5 fill-amber-400" />
+                      <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                     ))}
                   </div>
-                  <Quote className="w-5 h-5 text-slate-700" />
+                  <Quote className="w-5 h-5 text-blue-200" />
                 </div>
 
-                <div className="text-xs font-bold text-cyan-400 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 inline-block">
+                <div className="text-xs font-bold text-[#2563EB] bg-blue-50 px-2.5 py-1 rounded-lg border border-[#DBEAFE] inline-block">
                   {item.serviceUsed}
                 </div>
 
-                <p className="text-xs text-slate-300 leading-relaxed">
+                <p className="text-xs text-[#64748B] leading-relaxed">
                   "{item.comment}"
                 </p>
               </div>
 
-              <div className="pt-3 border-t border-slate-800/80">
-                <div className="font-bold text-white text-xs">{item.name}</div>
-                <div className="text-[11px] text-slate-500">{item.role} • {item.date}</div>
+              <div className="pt-3 border-t border-[#DBEAFE]">
+                <div className="font-bold text-[#0F172A] text-xs">{item.name}</div>
+                <div className="text-[11px] text-[#64748B]">{item.role}</div>
               </div>
             </div>
           ))}

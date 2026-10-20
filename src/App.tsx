@@ -32,8 +32,10 @@ import {
   isAdminAuthenticated, 
   getStoredServices, 
   getStoredArticles, 
-  getStoredSettings 
+  getStoredSettings,
+  getStoredCategories 
 } from './utils/adminStorage';
+import { getArticleCanonicalUrl, SITE_URL } from './utils/seoConfig';
 import { Sparkles, SearchX } from 'lucide-react';
 
 export default function App() {
@@ -60,13 +62,17 @@ export default function App() {
 
   const t = UI_TRANSLATIONS[lang];
   
-  // Dynamic Services & Articles loaded with localStorage persistence
+  // Dynamic Services, Articles, and Categories loaded with localStorage persistence
   const allServices = useMemo(() => {
     return getStoredServices(lang);
   }, [lang, dataVersion]);
 
   const allArticles = useMemo(() => {
     return lang === 'ar' ? getStoredArticles() : ARTICLES_DATA_EN;
+  }, [lang, dataVersion]);
+
+  const categoriesList = useMemo(() => {
+    return getStoredCategories(lang);
   }, [lang, dataVersion]);
 
   const toggleLanguage = () => {
@@ -100,9 +106,45 @@ export default function App() {
     setSelectedArticleId(articleId);
   };
 
+  // Deep linking and Google Search Console URL inspection support (?article=... or ?service=...)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const articleParam = params.get('article');
+      const serviceParam = params.get('service');
+      const sectionParam = params.get('section');
+
+      if (articleParam) {
+        setSelectedArticleId(articleParam);
+        const article = allArticles.find(a => a.id === articleParam);
+        if (article) {
+          document.title = `${article.title} | رقيب للبرمجة والتسويق`;
+          setTimeout(() => {
+            const el = document.getElementById('articles-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }, 350);
+        }
+      } else if (serviceParam) {
+        const service = allServices.find(s => s.id === serviceParam);
+        if (service) {
+          setSelectedServiceForDetails(service);
+          document.title = `${service.title} | رقيب للبرمجة والتسويق`;
+        }
+      } else if (sectionParam) {
+        setTimeout(() => {
+          const el = document.getElementById(sectionParam);
+          if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }, 350);
+      }
+    } catch {
+      // ignore
+    }
+  }, [allArticles, allServices]);
+
   return (
     <div 
-      className={`min-h-screen bg-slate-950 text-slate-100 flex flex-col font-['Cairo',sans-serif] selection:bg-cyan-500 selection:text-white`}
+      className={`min-h-screen bg-gradient-to-b from-[#F8FAFF] via-white to-[#E6F0FF] text-[#0F172A] flex flex-col font-['Cairo','Tajawal',sans-serif] selection:bg-blue-600 selection:text-white`}
       dir={lang === 'ar' ? 'rtl' : 'ltr'}
     >
       
@@ -121,6 +163,7 @@ export default function App() {
         onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
         isAdminLoggedIn={isAdminLoggedIn}
         onOpenAdminDashboard={() => setIsAdminDashboardOpen(true)}
+        categoriesList={categoriesList}
       />
 
       {/* Main Content Area */}
@@ -143,21 +186,24 @@ export default function App() {
           lang={lang}
         />
 
-
         {/* Services Section with Categories & Filter */}
-        <section id="services-section" className="py-16 sm:py-20 bg-slate-950 relative">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section id="services-section" className="py-16 sm:py-20 relative overflow-hidden">
+          {/* Decorative soft blue circles for background */}
+          <div className="absolute top-1/2 left-0 w-80 h-80 bg-blue-300/10 rounded-full blur-[100px] pointer-events-none" />
+          <div className="absolute bottom-10 right-0 w-96 h-96 bg-sky-400/10 rounded-full blur-[120px] pointer-events-none" />
+
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             
             {/* Section Heading */}
             <div className="text-center max-w-3xl mx-auto space-y-3 mb-10">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-950 text-cyan-400 text-xs font-bold border border-cyan-800/40">
-                <Sparkles className="w-3.5 h-3.5" />
+              <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white text-[#2563EB] text-xs font-bold border border-[#DBEAFE] shadow-sm">
+                <Sparkles className="w-3.5 h-3.5 text-[#3B82F6]" />
                 <span>{t.servicesDirectory}</span>
               </div>
-              <h2 className="text-2xl sm:text-4xl font-black text-white">
+              <h2 className="text-2xl sm:text-4xl font-black text-[#0F172A] tracking-tight">
                 {t.allServicesTitle}
               </h2>
-              <p className="text-xs sm:text-sm text-slate-300">
+              <p className="text-xs sm:text-sm text-[#64748B] leading-relaxed">
                 {t.allServicesSubtitle}
               </p>
             </div>
@@ -168,18 +214,19 @@ export default function App() {
                 activeCategory={activeCategory}
                 onSelectCategory={(cat) => setActiveCategory(cat)}
                 lang={lang}
+                categoriesList={categoriesList}
               />
             </div>
 
             {/* Search active notice if typing */}
             {searchQuery && (
-              <div className="mb-6 p-3 rounded-xl bg-slate-900 border border-cyan-800/40 flex items-center justify-between text-xs text-slate-300">
+              <div className="mb-6 p-3.5 rounded-2xl bg-white border border-[#DBEAFE] shadow-sm flex items-center justify-between text-xs text-[#64748B]">
                 <div>
-                  {t.searchResultsFor}: <strong className="text-cyan-400">"{searchQuery}"</strong> ({filteredServices.length} {t.servicesCountSuffix})
+                  {t.searchResultsFor}: <strong className="text-[#2563EB]">"{searchQuery}"</strong> ({filteredServices.length} {t.servicesCountSuffix})
                 </div>
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="text-cyan-400 hover:underline font-bold cursor-pointer"
+                  className="text-[#2563EB] hover:underline font-bold cursor-pointer"
                 >
                   {t.cancelSearch}
                 </button>
@@ -200,12 +247,12 @@ export default function App() {
                 ))}
               </div>
             ) : (
-              <div className="p-12 text-center rounded-3xl bg-slate-900 border border-slate-800 space-y-4 max-w-md mx-auto">
-                <div className="w-16 h-16 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
+              <div className="p-12 text-center rounded-3xl bg-white border border-[#DBEAFE] space-y-4 max-w-md mx-auto shadow-[0_4px_20px_rgba(37,99,235,0.06)]">
+                <div className="w-16 h-16 rounded-full bg-blue-50 text-[#3B82F6] flex items-center justify-center mx-auto border border-[#DBEAFE]">
                   <SearchX className="w-8 h-8" />
                 </div>
-                <h3 className="text-base font-bold text-white">{t.noServicesFound}</h3>
-                <p className="text-xs text-slate-400">
+                <h3 className="text-base font-bold text-[#0F172A]">{t.noServicesFound}</h3>
+                <p className="text-xs text-[#64748B]">
                   {t.tryDifferentQuery}
                 </p>
                 <button
@@ -213,7 +260,7 @@ export default function App() {
                     setSearchQuery('');
                     setActiveCategory('all');
                   }}
-                  className="px-4 py-2 rounded-xl bg-cyan-600 text-white text-xs font-bold cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] text-white text-xs font-bold cursor-pointer shadow-md hover:from-[#1D4ED8] hover:to-[#1E40AF] transition"
                 >
                   {t.showAllServices}
                 </button>

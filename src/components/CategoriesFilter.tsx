@@ -9,21 +9,24 @@ import {
   TrendingUp 
 } from 'lucide-react';
 import { ServiceCategory, Language } from '../types';
-import { CATEGORIES_LIST } from '../data/servicesData';
-import { CATEGORIES_LIST_EN } from '../data/servicesDataEn';
+import { getStoredCategories, CategoryOrderItem } from '../utils/adminStorage';
 
 interface CategoriesFilterProps {
   activeCategory: ServiceCategory;
   onSelectCategory: (cat: ServiceCategory) => void;
   lang: Language;
+  categoriesList?: CategoryOrderItem[];
 }
 
 export const CategoriesFilter: React.FC<CategoriesFilterProps> = ({
   activeCategory,
   onSelectCategory,
-  lang
+  lang,
+  categoriesList
 }) => {
-  const categories = lang === 'ar' ? CATEGORIES_LIST : CATEGORIES_LIST_EN;
+  const categories = categoriesList && categoriesList.length > 0 
+    ? categoriesList 
+    : getStoredCategories(lang);
 
   const getCategoryIcon = (id: ServiceCategory) => {
     switch (id) {
@@ -49,19 +52,19 @@ export const CategoriesFilter: React.FC<CategoriesFilterProps> = ({
               <button
                 key={category.id}
                 onClick={() => onSelectCategory(category.id)}
-                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none shrink-0 min-h-[42px] ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none shrink-0 min-h-[42px] ${
                   isActive
-                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/25 scale-[1.02]'
-                    : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-800'
+                    ? 'bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] text-white shadow-lg shadow-blue-500/25 scale-[1.02]'
+                    : 'bg-white text-[#0F172A] hover:bg-blue-50/70 border border-[#DBEAFE] shadow-[0_2px_8px_rgba(37,99,235,0.04)]'
                 }`}
               >
-                <span className={isActive ? 'text-white' : 'text-cyan-400'}>
+                <span className={isActive ? 'text-white' : 'text-[#3B82F6]'}>
                   {getCategoryIcon(category.id)}
                 </span>
                 <span>{category.name}</span>
                 <span
                   className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'
+                    isActive ? 'bg-white/20 text-white' : 'bg-blue-50 text-[#2563EB] border border-[#DBEAFE]'
                   }`}
                 >
                   {category.count}
